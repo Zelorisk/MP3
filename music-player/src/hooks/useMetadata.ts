@@ -1,6 +1,5 @@
 import { parseBlob } from "music-metadata-browser";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Song } from "../types";
 import { saveArtwork, getArtwork } from "../utils/artworkCache";
 
@@ -19,8 +18,7 @@ export const extractMetadata = async (
   filePath: string,
 ): Promise<Partial<Song> | null> => {
   try {
-    const convertedPath = convertFileSrc(filePath);
-    const cachedArtwork = await getArtwork(convertedPath);
+    const cachedArtwork = await getArtwork(filePath);
 
     const fileData = await readFile(filePath);
     const blob = new Blob([fileData]);
@@ -47,7 +45,7 @@ export const extractMetadata = async (
         const base64 = uint8ArrayToBase64(picture.data);
         console.log("Base64 conversion successful, length:", base64.length);
         artwork = `data:${picture.format};base64,${base64}`;
-        await saveArtwork(convertedPath, artwork);
+        await saveArtwork(filePath, artwork);
         console.log("✅ Artwork cached for:", extractFileName(filePath));
       } catch (artworkError) {
         console.error("❌ Base64 conversion failed:", artworkError);
@@ -69,7 +67,7 @@ export const extractMetadata = async (
       year: metadata.common.year,
       genre: metadata.common.genre?.[0],
       artwork,
-      filePath: convertedPath,
+      filePath: filePath,
       dateAdded: Date.now(),
     };
   } catch (error) {

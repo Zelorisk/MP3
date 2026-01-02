@@ -6,6 +6,7 @@ import {
   Clock,
   ListMusic,
   Plus,
+  FolderPlus,
 } from "lucide-react";
 import { useState } from "react";
 import { useFileSystem } from "../hooks/useFileSystem";
@@ -34,6 +35,27 @@ export const Sidebar = () => {
     if (filePaths.length > 0) {
       const songs = await extractFromFiles(filePaths);
       addSongs(songs);
+    }
+  };
+
+  const handleImportFolderAsPlaylist = async () => {
+    const filePaths = await openFolder();
+    if (filePaths.length > 0) {
+      const folderName =
+        filePaths[0].split("/").filter(Boolean).slice(-2, -1)[0] ||
+        "New Playlist";
+
+      const songs = await extractFromFiles(filePaths);
+
+      const playlistId = createPlaylist(folderName);
+
+      const addedSongs = addSongs(songs);
+
+      addedSongs.forEach((song) => {
+        useLibraryStore.getState().addToPlaylist(playlistId, song.id);
+      });
+
+      setPlaylistView(playlistId);
     }
   };
 
@@ -181,6 +203,15 @@ export const Sidebar = () => {
         >
           <FolderOpen size={18} />
           <span className="text-sm font-light">Add Folder</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleImportFolderAsPlaylist}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-accent/30 text-accent hover:text-accent/80 hover:border-accent transition-colors"
+        >
+          <FolderPlus size={18} />
+          <span className="text-sm font-light">Import as Playlist</span>
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Howl } from "howler";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Song, RepeatMode } from "../types";
 import { useLibraryStore } from "./libraryStore";
 
@@ -56,19 +57,37 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       sound.unload();
     }
 
+    const convertedPath = convertFileSrc(song.filePath);
+    console.log("🎵 Playing song:", song.title);
+    console.log("📁 Original path:", song.filePath);
+    console.log("🔗 Converted path:", convertedPath);
+
     const newSound = new Howl({
-      src: [song.filePath],
+      src: [convertedPath],
       html5: true,
       volume: isMuted ? 0 : volume / 100,
       onload: () => {
+        console.log("✅ Audio loaded successfully");
         set({ duration: newSound.duration() });
       },
+      onloaderror: (_id, error) => {
+        console.error("❌ Audio load error:", error);
+        console.error("Failed to load:", convertedPath);
+      },
+      onplayerror: (_id, error) => {
+        console.error("❌ Audio play error:", error);
+      },
       onplay: () => {
+        console.log("▶️ Playback started");
         set({ isPlaying: true });
         get().updateProgress();
       },
-      onpause: () => set({ isPlaying: false }),
+      onpause: () => {
+        console.log("⏸️ Playback paused");
+        set({ isPlaying: false });
+      },
       onend: () => {
+        console.log("⏭️ Playback ended");
         const { repeat, next } = get();
         set({ isPlaying: false, currentTime: 0 });
 

@@ -11,11 +11,11 @@ interface LibraryStore {
   sortBy: "title" | "artist" | "album" | "duration" | "dateAdded";
   sortOrder: "asc" | "desc";
 
-  addSongs: (songs: Song[]) => void;
+  addSongs: (songs: Song[]) => Song[];
   removeSong: (id: string) => void;
   clearLibrary: () => void;
 
-  createPlaylist: (name: string) => void;
+  createPlaylist: (name: string) => string;
   deletePlaylist: (id: string) => void;
   renamePlaylist: (id: string, name: string) => void;
   addToPlaylist: (playlistId: string, songId: string) => void;
@@ -49,6 +49,7 @@ export const useLibraryStore = create<LibraryStore>()(
           (s) => !existingPaths.has(s.filePath),
         );
         set({ songs: [...songs, ...uniqueSongs] });
+        return uniqueSongs;
       },
 
       removeSong: (id) => {
@@ -68,6 +69,7 @@ export const useLibraryStore = create<LibraryStore>()(
           updatedAt: Date.now(),
         };
         set({ playlists: [...get().playlists, newPlaylist] });
+        return newPlaylist.id;
       },
 
       deletePlaylist: (id) => {
@@ -192,11 +194,30 @@ export const useLibraryStore = create<LibraryStore>()(
           if (state?.songs) {
             const songsWithArtwork = await Promise.all(
               state.songs.map(async (song) => {
-                if (!song.artwork && song.filePath) {
-                  const artwork = await getArtwork(song.filePath);
-                  return { ...song, artwork: artwork || undefined };
+                let fixedPath = song.filePath;
+
+                if (fixedPath.startsWith("asset://")) {
+                  const decodedPath = decodeURIComponent(fixedPath);
+                  const pathMatch = decodedPath.match(
+                    /\/(Users|home|mnt)\/.+\.(mp3|flac|wav|ogg|m4a|aac)$/i,
+                  );
+                  if (pathMatch) {
+                    fixedPath = "/" + pathMatch[0].replace(/^\/+/, "");
+                    console.log("🔧 Fixed legacy path for:", song.title);
+                    console.log("   Old:", song.filePath);
+                    console.log("   New:", fixedPath);
+                  }
                 }
-                return song;
+
+                if (!song.artwork && fixedPath) {
+                  const artwork = await getArtwork(fixedPath);
+                  return {
+                    ...song,
+                    filePath: fixedPath,
+                    artwork: artwork || undefined,
+                  };
+                }
+                return { ...song, filePath: fixedPath };
               }),
             );
             state.songs = songsWithArtwork;

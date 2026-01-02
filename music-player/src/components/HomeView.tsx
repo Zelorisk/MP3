@@ -31,7 +31,8 @@ export const HomeView = () => {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {recentSongs.map((song, index) => (
-              <div
+              <button
+                type="button"
                 key={song.id}
                 onClick={() => handlePlayRecent(index)}
                 className="group bg-surface/30 hover:bg-surface/60 rounded-lg flex items-center gap-4 overflow-hidden cursor-pointer transition-all"
@@ -55,7 +56,7 @@ export const HomeView = () => {
                     {song.artist}
                   </p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

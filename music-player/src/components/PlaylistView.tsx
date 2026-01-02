@@ -1,11 +1,4 @@
-import {
-  Music,
-  Play,
-  Trash2,
-  ArrowLeft,
-  MoreVertical,
-  Plus,
-} from "lucide-react";
+import { Music, Play, Trash2, ArrowLeft, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
 import { useLibraryStore } from "../store/libraryStore";
 import { useViewStore } from "../store/viewStore";
@@ -21,10 +14,13 @@ export const PlaylistView = () => {
     removeFromPlaylist,
     deletePlaylist,
     renamePlaylist,
+    addToPlaylist,
   } = useLibraryStore();
   const { setQueue, currentSong, isPlaying } = usePlayerStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [showAddSongs, setShowAddSongs] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const playlist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -35,6 +31,14 @@ export const PlaylistView = () => {
 
   const playlistSongs = songs.filter((s) => playlist.songs.includes(s.id));
   const totalDuration = playlistSongs.reduce((acc, s) => acc + s.duration, 0);
+
+  const availableSongs = songs.filter((s) => !playlist.songs.includes(s.id));
+  const filteredAvailableSongs = availableSongs.filter(
+    (s) =>
+      s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.album.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const handlePlaySong = (_song: Song, index: number) => {
     setQueue(playlistSongs, index);
@@ -62,6 +66,10 @@ export const PlaylistView = () => {
   const startEditing = () => {
     setEditName(playlist.name);
     setIsEditing(true);
+  };
+
+  const handleAddSong = (songId: string) => {
+    addToPlaylist(playlist.id, songId);
   };
 
   const isCurrentSong = (song: Song) => currentSong?.id === song.id;
@@ -130,20 +138,101 @@ export const PlaylistView = () => {
           )}
 
           <button
+            onClick={() => setShowAddSongs(!showAddSongs)}
+            className="text-secondary hover:text-primary transition-colors p-2"
+            title="Add songs"
+          >
+            <Plus size={20} />
+          </button>
+
+          <button
             onClick={handleDelete}
             className="text-secondary hover:text-red-500 transition-colors p-2"
             title="Delete playlist"
           >
             <Trash2 size={20} />
           </button>
-
-          <button className="text-secondary hover:text-primary transition-colors p-2">
-            <MoreVertical size={20} />
-          </button>
         </div>
       </div>
 
       <div className="px-6 pb-6">
+        {showAddSongs && (
+          <div className="mb-6 bg-surface rounded-lg p-4 border border-tertiary/30">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-primary">Add Songs</h3>
+              <button
+                onClick={() => {
+                  setShowAddSongs(false);
+                  setSearchQuery("");
+                }}
+                className="text-secondary hover:text-primary transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="relative mb-4">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search songs..."
+                className="w-full bg-background border border-tertiary/30 rounded-lg pl-10 pr-4 py-2 text-sm text-primary placeholder-secondary focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            <div className="max-h-96 overflow-y-auto space-y-1">
+              {filteredAvailableSongs.length === 0 ? (
+                <p className="text-center text-secondary py-8">
+                  {availableSongs.length === 0
+                    ? "All songs from your library are already in this playlist"
+                    : "No songs found"}
+                </p>
+              ) : (
+                filteredAvailableSongs.map((song) => (
+                  <div
+                    key={song.id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-tertiary/50 transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-background rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {song.artwork ? (
+                        <img
+                          src={song.artwork}
+                          alt={song.album}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Music size={16} className="text-secondary" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-primary truncate">
+                        {song.title}
+                      </h4>
+                      <p className="text-xs text-secondary truncate">
+                        {song.artist}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleAddSong(song.id)}
+                      className="text-accent hover:text-accent/80 transition-colors p-2"
+                      title="Add to playlist"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {playlistSongs.length === 0 ? (
           <div className="text-center py-20">
             <Plus size={64} className="text-tertiary mx-auto mb-4" />
@@ -151,7 +240,7 @@ export const PlaylistView = () => {
               This playlist is empty
             </h3>
             <p className="text-sm text-secondary">
-              Add songs from your library
+              Add songs from your library using the + button above
             </p>
           </div>
         ) : (

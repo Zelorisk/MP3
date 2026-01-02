@@ -68,7 +68,8 @@ export const SongList = () => {
 
         <div className="space-y-1">
           {songs.map((song, index) => (
-            <div
+            <button
+              type="button"
               key={song.id}
               onClick={() => handleSongClick(song, index)}
               className={`w-full group flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all ${
@@ -174,7 +175,7 @@ export const SongList = () => {
                   <Trash2 size={16} />
                 </button>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
