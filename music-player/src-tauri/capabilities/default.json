@@ -9,6 +9,15 @@
     "core:path:default",
     "core:event:default",
     "dialog:default",
-    "fs:default"
+    "dialog:allow-open",
+    "fs:default",
+    "fs:allow-read-file",
+    "fs:allow-read-dir",
+    "fs:allow-exists",
+    "fs:allow-stat",
+    "fs:scope-audio-recursive",
+    "fs:scope-home-recursive",
+    "fs:scope-document-recursive",
+    "fs:scope-download-recursive"
   ]
 }

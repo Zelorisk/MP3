@@ -179,10 +179,25 @@ export const useLibraryStore = create<LibraryStore>()(
     {
       name: "music-player-library",
       partialize: (state) => ({
-        songs: state.songs.map((song) => ({
-          ...song,
-          artwork: undefined,
-        })),
+        songs: state.songs.map((song) => {
+          let cleanPath = song.filePath;
+
+          if (cleanPath.startsWith("asset://")) {
+            const decodedPath = decodeURIComponent(cleanPath);
+            const pathMatch = decodedPath.match(
+              /\/(Users|home|mnt)\/.+\.(mp3|flac|wav|ogg|m4a|aac)$/i,
+            );
+            if (pathMatch) {
+              cleanPath = "/" + pathMatch[0].replace(/^\/+/, "");
+            }
+          }
+
+          return {
+            ...song,
+            filePath: cleanPath,
+            artwork: undefined,
+          };
+        }),
         playlists: state.playlists,
         recentlyPlayed: state.recentlyPlayed,
         searchQuery: state.searchQuery,
@@ -192,35 +207,37 @@ export const useLibraryStore = create<LibraryStore>()(
       onRehydrateStorage: () => {
         return async (state) => {
           if (state?.songs) {
-            const songsWithArtwork = await Promise.all(
-              state.songs.map(async (song) => {
-                let fixedPath = song.filePath;
+            const fixedSongs = state.songs.map((song) => {
+              let fixedPath = song.filePath;
 
-                if (fixedPath.startsWith("asset://")) {
-                  const decodedPath = decodeURIComponent(fixedPath);
-                  const pathMatch = decodedPath.match(
-                    /\/(Users|home|mnt)\/.+\.(mp3|flac|wav|ogg|m4a|aac)$/i,
-                  );
-                  if (pathMatch) {
-                    fixedPath = "/" + pathMatch[0].replace(/^\/+/, "");
-                    console.log("🔧 Fixed legacy path for:", song.title);
-                    console.log("   Old:", song.filePath);
-                    console.log("   New:", fixedPath);
+              if (fixedPath.startsWith("asset://")) {
+                const decodedPath = decodeURIComponent(fixedPath);
+                const pathMatch = decodedPath.match(
+                  /\/(Users|home|mnt)\/.+\.(mp3|flac|wav|ogg|m4a|aac)$/i,
+                );
+                if (pathMatch) {
+                  fixedPath = "/" + pathMatch[0].replace(/^\/+/, "");
+                  console.log("🔧 Fixed legacy path for:", song.title);
+                }
+              }
+
+              return { ...song, filePath: fixedPath };
+            });
+
+            state.songs = fixedSongs;
+
+            setTimeout(async () => {
+              const songsWithArtwork = await Promise.all(
+                fixedSongs.map(async (song) => {
+                  if (!song.artwork && song.filePath) {
+                    const artwork = await getArtwork(song.filePath);
+                    return { ...song, artwork: artwork || undefined };
                   }
-                }
-
-                if (!song.artwork && fixedPath) {
-                  const artwork = await getArtwork(fixedPath);
-                  return {
-                    ...song,
-                    filePath: fixedPath,
-                    artwork: artwork || undefined,
-                  };
-                }
-                return { ...song, filePath: fixedPath };
-              }),
-            );
-            state.songs = songsWithArtwork;
+                  return song;
+                }),
+              );
+              state.songs = songsWithArtwork;
+            }, 100);
           }
         };
       },
